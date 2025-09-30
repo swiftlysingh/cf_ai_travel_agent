@@ -11,10 +11,34 @@ A starter template for building AI-powered chat agents using Cloudflare's Agent 
 - 💬 Interactive chat interface with AI
 - 🛠️ Built-in tool system with human-in-the-loop confirmation
 - 📅 Advanced task scheduling (one-time, delayed, and recurring via cron)
+- ✈️ Flight search integration (via Python API)
+- 🌤️ Weather information tool
 - 🌓 Dark/Light theme support
 - ⚡️ Real-time streaming responses
 - 🔄 State management and chat history
 - 🎨 Modern, responsive UI
+
+## ✈️ Flights Search Integration
+
+This project includes a flight search tool that integrates with Google Flights via the `flights-cli` Python package. The API runs separately from the Cloudflare Workers agent.
+
+**Setup:**
+```bash
+cd flights-api
+./setup.sh
+cd ..
+```
+
+**Start the API server:**
+```bash
+./flights-api/start.sh
+```
+
+**Usage:** Ask the agent to search for flights:
+- "Find me flights from SFO to LAX on March 1, 2026"
+- "Search for round-trip business class flights from JFK to London"
+
+See [`flights-api/README.md`](flights-api/README.md) for detailed documentation.
 
 ## Prerequisites
 
@@ -61,9 +85,14 @@ npm run deploy
 ├── src/
 │   ├── app.tsx        # Chat UI implementation
 │   ├── server.ts      # Chat agent logic
-│   ├── tools.ts       # Tool definitions
+│   ├── tools.ts       # Tool definitions (including flights search)
 │   ├── utils.ts       # Helper functions
 │   └── styles.css     # UI styling
+├── flights-api/       # Python API for flight searches
+│   ├── server.py      # HTTP server wrapping flights-cli
+│   ├── setup.sh       # Setup script
+│   ├── start.sh       # Start script
+│   └── README.md      # API documentation
 ```
 
 ## Customization Guide
@@ -183,28 +212,38 @@ The chat interface is built with React and can be customized in `app.tsx`:
 
 ### Example Use Cases
 
-1. **Customer Support Agent**
+1. **Travel Assistant** ✈️ (Included in this template!)
+   - Tools provided:
+     - Flight search with Google Flights integration
+     - Weather information for destinations
+     - Task scheduling for trip planning
+   - Example queries:
+     - "Find me flights from New York to London next month"
+     - "What's the weather like in Tokyo in March?"
+     - "Schedule a reminder to check my passport"
+
+2. **Customer Support Agent**
    - Add tools for:
      - Ticket creation/lookup
      - Order status checking
      - Product recommendations
      - FAQ database search
 
-2. **Development Assistant**
+3. **Development Assistant**
    - Integrate tools for:
      - Code linting
      - Git operations
      - Documentation search
      - Dependency checking
 
-3. **Data Analysis Assistant**
+4. **Data Analysis Assistant**
    - Build tools for:
      - Database querying
      - Data visualization
      - Statistical analysis
      - Report generation
 
-4. **Personal Productivity Assistant**
+5. **Personal Productivity Assistant**
    - Implement tools for:
      - Task scheduling with flexible timing options
      - One-time, delayed, and recurring task management
@@ -212,7 +251,7 @@ The chat interface is built with React and can be customized in `app.tsx`:
      - Email drafting
      - Note taking
 
-5. **Scheduling Assistant**
+6. **Scheduling Assistant**
    - Build tools for:
      - One-time event scheduling using specific dates
      - Delayed task execution (e.g., "remind me in 30 minutes")

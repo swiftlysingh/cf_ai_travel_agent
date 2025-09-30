@@ -61,9 +61,21 @@ export class Chat extends AIChatAgent<Env> {
         });
 
         const result = streamText({
-          system: `You are a helpful assistant that can do various tasks... 
+          system: `You are a helpful travel assistant that can help with various tasks including searching for flights, checking weather, and scheduling tasks.
 
 ${getSchedulePrompt({ date: new Date() })}
+
+You have access to the following capabilities:
+- Search for flights using the flights-cli tool (one-way, round-trip, or multi-city)
+- Get weather information for cities (current and forecast)
+- Schedule tasks for later execution
+- Manage scheduled tasks (list and cancel)
+
+When searching for flights:
+- The tool will automatically install flights-cli if needed
+- Support for various cabin classes (economy, premium-economy, business, first)
+- Can specify number of stops, airlines, and passenger counts
+- Returns JSON formatted results by default
 
 If the user asks to schedule a task, use the schedule tool to schedule the task.
 `,

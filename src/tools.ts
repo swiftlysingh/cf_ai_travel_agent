@@ -249,6 +249,138 @@ const cancelScheduledTask = tool({
 });
 
 /**
+ * Helper function to search for flights using a Python API service
+ * Since Cloudflare Workers doesn't support child_process, we call an external Python service
+ */
+async function searchFlights(params: {
+  tripType?: "one-way" | "round-trip" | "multi-city";
+  segments: Array<{
+    date: string;
+    from: string;
+    to: string;
+    maxStops?: number;
+    airlines?: string;
+  }>;
+  maxStops?: number;
+  cabinClass?: "economy" | "premium-economy" | "business" | "first";
+  fetchMode?: "common" | "fallback" | "force-fallback" | "local" | "bright-data";
+  dataSource?: "html" | "js";
+  adults?: number;
+  children?: number;
+  infantsInSeat?: number;
+  infantsOnLap?: number;
+  bestOnly?: boolean;
+  jsonOutput?: boolean;
+  prettyPrint?: boolean;
+}): Promise<string> {
+  // Get the Python API endpoint from environment variable
+  const pythonApiUrl = process.env.FLIGHTS_API_URL || "http://localhost:8787/api/flights";
+  
+  try {
+    const response = await fetch(pythonApiUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(params),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Flights API error (${response.status}): ${errorText}`);
+    }
+
+    const result = await response.json();
+    
+    // If the API returns structured data, format it nicely
+    if (typeof result === "object") {
+      return JSON.stringify(result, null, 2);
+    }
+    
+    return String(result);
+  } catch (error) {
+    console.error("Error calling flights API:", error);
+    
+    // Provide helpful error message
+    if (error instanceof Error && error.message.includes("fetch failed")) {
+      throw new Error(
+        `Unable to connect to the flights API service at ${pythonApiUrl}. ` +
+        `Please ensure the Python API service is running. ` +
+        `You can start it by running the flights-api-server.py script. ` +
+        `Set FLIGHTS_API_URL environment variable to configure the endpoint.`
+      );
+    }
+    
+    throw new Error(`Failed to search flights: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
+/**
+ * Flight search tool that uses a Python API service wrapping flights-cli
+ * Calls an external API endpoint to execute flight searches
+ */
+const searchFlightsTool = tool({
+  description: `Search for flights using Google Flights data. Supports one-way, round-trip, and multi-city searches with various options like cabin class, number of stops, passenger counts, and more.`,
+  inputSchema: z.object({
+    tripType: z
+      .enum(["one-way", "round-trip", "multi-city"])
+      .optional()
+      .describe("Type of trip. If not specified, will be inferred from segments (2 segments = round-trip, otherwise one-way)"),
+    segments: z
+      .array(
+        z.object({
+          date: z.string().describe("Departure date in YYYY-MM-DD format"),
+          from: z.string().describe("Origin airport IATA code (e.g., 'JFK', 'LAX')"),
+          to: z.string().describe("Destination airport IATA code (e.g., 'LHR', 'SFO')"),
+          maxStops: z.number().optional().describe("Maximum stops for this specific segment (overrides global maxStops)"),
+          airlines: z.string().optional().describe("Comma-separated airline codes (e.g., 'AA,DL') or alliances (e.g., 'SKYTEAM')")
+        })
+      )
+      .min(1)
+      .describe("Flight segments. For round-trip, provide 2 segments. For multi-city, provide 3 or more."),
+    maxStops: z.number().optional().describe("Maximum number of stops globally (can be overridden per segment)"),
+    cabinClass: z
+      .enum(["economy", "premium-economy", "business", "first"])
+      .default("economy")
+      .describe("Cabin class for the flight"),
+    fetchMode: z
+      .enum(["common", "fallback", "force-fallback", "local", "bright-data"])
+      .default("common")
+      .describe("Backend fetch strategy: 'common' for direct HTTP, 'fallback' for fallback to Playwright, etc."),
+    dataSource: z
+      .enum(["html", "js"])
+      .default("html")
+      .describe("Data source: 'html' for summaries, 'js' for detailed itinerary data"),
+    adults: z.number().min(1).max(9).default(1).describe("Number of adult passengers"),
+    children: z.number().min(0).max(8).default(0).describe("Number of child passengers"),
+    infantsInSeat: z.number().min(0).default(0).describe("Number of infants in seats"),
+    infantsOnLap: z.number().min(0).default(0).describe("Number of infants on lap (must not exceed adults)"),
+    bestOnly: z.boolean().default(false).describe("Return only the best flight(s)"),
+    jsonOutput: z.boolean().default(true).describe("Output structured JSON"),
+    prettyPrint: z.boolean().default(true).describe("Format JSON with indentation (requires jsonOutput to be true)")
+  }),
+  execute: async (params) => {
+    try {
+      // Validate total passengers
+      const totalPassengers = params.adults + params.children + params.infantsInSeat + params.infantsOnLap;
+      if (totalPassengers > 9) {
+        return "Error: Total number of passengers cannot exceed 9.";
+      }
+      
+      // Validate infants on lap
+      if (params.infantsOnLap > params.adults) {
+        return "Error: Number of infants on lap cannot exceed number of adults.";
+      }
+
+      return await searchFlights(params);
+    } catch (error) {
+      console.error("Error in searchFlightsTool:", error);
+      return `Error searching for flights: ${error instanceof Error ? error.message : String(error)}`;
+    }
+  }
+});
+
+/**
  * Export all available tools
  * These will be provided to the AI model to describe available capabilities
  */
@@ -257,7 +389,8 @@ export const tools = {
   getLocalTime,
   scheduleTask,
   getScheduledTasks,
-  cancelScheduledTask
+  cancelScheduledTask,
+  searchFlightsTool
 } satisfies ToolSet;
 
 /**

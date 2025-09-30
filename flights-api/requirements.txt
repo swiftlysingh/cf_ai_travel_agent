@@ -1,0 +1,2 @@
+# Flights CLI - command-line interface for fast-flights library
+git+https://github.com/swiftlysingh/flights-cli
