@@ -128,6 +128,97 @@ async function getForecastWeather(city: string, targetDate: string, apiKey: stri
 ${forecastsText}`;
 }
 
+interface FirecrawlWebResult {
+  title?: string;
+  description?: string;
+  summary?: string;
+  url?: string;
+  markdown?: string;
+  metadata?: {
+    sourceURL?: string;
+  };
+}
+
+interface FirecrawlSearchResponse {
+  success: boolean;
+  data?: {
+    web?: FirecrawlWebResult[];
+  };
+  warning?: string;
+}
+
+async function fetchFirecrawlExperiences(query: string, limit = 8): Promise<FirecrawlWebResult[]> {
+  const apiKey = process.env.FIRECRAWL_API_KEY;
+
+  if (!apiKey) {
+    throw new Error(
+      "FIRECRAWL_API_KEY is not configured. Add it to .dev.vars and redeploy secrets."
+    );
+  }
+
+  const payload = {
+    query,
+    sources: ["web"],
+    categories: [],
+    limit,
+    scrapeOptions: {
+      onlyMainContent: false,
+      maxAge: 172800000,
+      parsers: ["pdf"],
+      formats: [
+        "summary",
+        {
+          type: "json",
+          schema: {
+            type: "object",
+            required: [],
+            properties: {
+              thing_name: { type: "string" },
+              thing_description: { type: "string" }
+            }
+          }
+        }
+      ]
+    }
+  } satisfies Record<string, unknown>;
+
+  const response = await fetch("https://api.firecrawl.dev/v2/search", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    let errorDetail = `${response.status} ${response.statusText}`;
+    try {
+      const errorBody = await response.json();
+      if (errorBody && typeof errorBody === "object" && "message" in errorBody) {
+        errorDetail = `${errorDetail} - ${(errorBody as { message?: string }).message}`;
+      }
+    } catch {
+      // ignore JSON parse errors for error body
+    }
+    throw new Error(`Firecrawl search failed: ${errorDetail}`);
+  }
+
+  const data = (await response.json()) as FirecrawlSearchResponse;
+
+  if (!data.success) {
+    throw new Error("Firecrawl search was unsuccessful. Check query parameters.");
+  }
+
+  const results = data.data?.web ?? [];
+
+  if (!results.length) {
+    return [];
+  }
+
+  return results.filter((item) => item.title || item.summary || item.description);
+}
+
 /**
  * Weather information tool that fetches current or forecasted weather
  * Uses OpenWeatherMap API to get real weather data
@@ -244,6 +335,62 @@ const cancelScheduledTask = tool({
     } catch (error) {
       console.error("Error canceling scheduled task", error);
       return `Error canceling task ${taskId}: ${error}`;
+    }
+  }
+});
+
+const getTravelExperiences = tool({
+  description:
+    "Discover must-do activities for a destination during a given month using live web research (Firecrawl).",
+  inputSchema: z.object({
+    destination: z
+      .string()
+      .min(2, "Destination must be at least 2 characters long.")
+      .describe("City, region, or country to research."),
+    month: z
+      .string()
+      .optional()
+      .describe("Target travel month (e.g., 'November'). Used to seasonally scope results."),
+    context: z
+      .string()
+      .optional()
+      .describe(
+        "Additional context or focus areas (e.g., 'family friendly food tours'). Overrides default query when provided."
+      )
+  }),
+  execute: async ({ destination, month, context }) => {
+    const trimmedDestination = destination.trim();
+
+    if (!trimmedDestination) {
+      return "Destination cannot be empty.";
+    }
+
+    const baseQuery = `absolute must activities to do in ${trimmedDestination}`;
+    const scopedQuery = month ? `${baseQuery} in ${month}` : baseQuery;
+    const searchQuery = context && context.trim().length > 0 ? context.trim() : scopedQuery;
+
+    try {
+      const results = await fetchFirecrawlExperiences(searchQuery);
+
+      if (!results.length) {
+        return `No standout experiences found for ${trimmedDestination}. Try refining the query.`;
+      }
+
+      const formatted = results.slice(0, 6).map((item, index) => {
+        const title = item.title?.trim() || `Experience ${index + 1}`;
+        const summary = (item.summary ?? item.description ?? "No description provided.")
+          .replace(/\s+/g, " ")
+          .trim();
+        const snippet = summary.length > 280 ? `${summary.slice(0, 277)}...` : summary;
+        const sourceUrl = item.url ?? item.metadata?.sourceURL ?? "Source unavailable";
+
+        return `${index + 1}. ${title}\n   • ${snippet}\n   • Source: ${sourceUrl}`;
+      });
+
+      return formatted.join("\n\n");
+    } catch (error) {
+      console.error("Error fetching travel experiences:", error);
+      return `Error fetching travel experiences: ${error instanceof Error ? error.message : String(error)}`;
     }
   }
 });
@@ -390,7 +537,8 @@ export const tools = {
   scheduleTask,
   getScheduledTasks,
   cancelScheduledTask,
-  searchFlightsTool
+  searchFlightsTool,
+  getTravelExperiences
 } satisfies ToolSet;
 
 /**

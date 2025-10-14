@@ -13,6 +13,7 @@ A starter template for building AI-powered chat agents using Cloudflare's Agent 
 - 📅 Advanced task scheduling (one-time, delayed, and recurring via cron)
 - ✈️ Flight search integration (via Python API)
 - 🌤️ Weather information tool
+- 🧭 Travel experience discovery via Firecrawl
 - 🌓 Dark/Light theme support
 - ⚡️ Real-time streaming responses
 - 🔄 State management and chat history
@@ -65,6 +66,7 @@ Create a `.dev.vars` file:
 
 ```env
 OPENAI_API_KEY=your_openai_api_key
+FIRECRAWL_API_KEY=your_firecrawl_api_key
 ```
 
 4. Run locally:
@@ -217,10 +219,12 @@ The chat interface is built with React and can be customized in `app.tsx`:
      - Flight search with Google Flights integration
      - Weather information for destinations
      - Task scheduling for trip planning
+     - Travel experiences discovery via Firecrawl (seasonal must-do activities)
    - Example queries:
      - "Find me flights from New York to London next month"
      - "What's the weather like in Tokyo in March?"
      - "Schedule a reminder to check my passport"
+     - "Pull must-do food experiences in Kyoto for November"
 
 2. **Customer Support Agent**
    - Add tools for:
