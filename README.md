@@ -1,284 +1,98 @@
-# 🤖 Chat Agent Starter Kit
+# 🤖 Travel Agent
 
-![npm i agents command](./npm-agents-banner.svg)
+A Cloudflare Workers AI agent that builds smarter, cheaper multi-city travel plans.
 
 <a href="https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/agents-starter"><img src="https://deploy.workers.cloudflare.com/button" alt="Deploy to Cloudflare"/></a>
 
-A starter template for building AI-powered chat agents using Cloudflare's Agent platform, powered by [`agents`](https://www.npmjs.com/package/agents). This project provides a foundation for creating interactive chat experiences with AI, complete with a modern UI and tool integration capabilities.
+## Why This Exists
 
-## Features
+Long, multi-stop trips are notoriously hard to price. Flying A → B → C might be dramatically cheaper than the more obvious B → A → C, and the best route often changes if you shift the dates by a couple of days. This agent runs the permutations for you, checks real flight prices, and layers on weather and activity research so you can plan with confidence.
 
-- 💬 Interactive chat interface with AI
-- 🛠️ Built-in tool system with human-in-the-loop confirmation
-- 📅 Advanced task scheduling (one-time, delayed, and recurring via cron)
-- ✈️ Flight search integration (via Python API)
-- 🌤️ Weather information tool
-- 🧭 Travel experience discovery via Firecrawl
-- 🌓 Dark/Light theme support
-- ⚡️ Real-time streaming responses
-- 🔄 State management and chat history
-- 🎨 Modern, responsive UI
+## Key Capabilities
 
-## ✈️ Flights Search Integration
+- ✈️ **Permutation-Aware Flight Search** – Explores every ordering of your city list to surface the lowest total fare.
+- 📅 **Flexible Fare Window** – Optional ±5 day sweep around each departure to catch cheaper alternatives.
+- 🌤️ **Weather Intelligence** – Uses the OpenWeather API for current conditions and five-day forecasts.
+- 🧭 **Destination Discovery** – Firecrawl-powered lookups for local highlights, dining, and must-do experiences.
+- 🧾 **Itinerary Summaries** – Generates concise trip plans using OpenAI’s GPT-5 Nano model via the Cloudflare AI Agent framework.
+- 🏨 **Hotel Booking (in progress)** – A `bookHotel` tool stub is wired in while we evaluate hotel APIs; suggestions route to a confirmation workflow for now.
 
-This project includes a flight search tool that integrates with Google Flights via the `flights-cli` Python package. The API runs separately from the Cloudflare Workers agent.
+## Integrations & Data Sources
 
-**Setup:**
+| Capability              | Provider / Tool            | Notes |
+| ----------------------- | -------------------------- | ----- |
+| Flight availability     | `flights-cli` (Google Flights) | Python microservice called from the Worker |
+| Activities & experiences| Firecrawl                  | Scrapes curated guides and attractions |
+| Weather data            | OpenWeather API            | Current weather + 5-day forecast |
+| Language model          | OpenAI `gpt-5-nano`        | Runs through Cloudflare Agents SDK |
+| Hotel booking           | _Pending_                  | Evaluating suppliers; tool present but inactive |
 
-```bash
-cd flights-api
-./setup.sh
-cd ..
-```
+## Architecture at a Glance
 
-**Start the API server:**
-
-```bash
-./flights-api/start.sh
-```
-
-**Usage:** Ask the agent to search for flights:
-
-- "Find me flights from SFO to LAX on March 1, 2026"
-- "Search for round-trip business class flights from JFK to London"
-
-See [`flights-api/README.md`](flights-api/README.md) for detailed documentation.
+- **Cloudflare Workers AI Agent (`src/server.ts`)** orchestrates the conversation, tool calls, and streaming responses.
+- **Flights API microservice (`flights-api/`)** wraps `flights-cli` to query Google Flights.
+- **React chat UI (`src/app.tsx`)** offers confirmation gates (e.g., before booking) and displays streaming output.
+- **Tool registry (`src/tools.ts`)** houses flight search, weather lookup, Firecrawl discovery, scheduling helpers, and the in-progress hotel booking hook.
 
 ## Prerequisites
 
-- Cloudflare account
-- OpenAI API key
+- Cloudflare account with Workers + AI access
+- OpenAI API key (for GPT-5 Nano)
+- Firecrawl API key
+- OpenWeather API key
 
-## Quick Start
+## Environment Configuration
 
-1. Create a new project:
-
-```bash
-npx create-cloudflare@latest --template cloudflare/agents-starter
-```
-
-2. Install dependencies:
-
-```bash
-npm install
-```
-
-3. Set up your environment:
-
-Create a `.dev.vars` file:
+Create `.dev.vars` in the project root:
 
 ```env
 OPENAI_API_KEY=your_openai_api_key
 FIRECRAWL_API_KEY=your_firecrawl_api_key
+OPENWEATHER_API_KEY=your_openweather_api_key
+FLIGHTS_API_URL=http://localhost:8787/api/flights # optional override
 ```
 
-4. Run locally:
+## Getting Started
 
-```bash
-npm start
-```
+1. **Install dependencies**
+   ```bash
+   npm install
+   ```
+2. **Set up the flights microservice**
+   ```bash
+   cd flights-api
+   ./setup.sh
+   ./start.sh
+   # service listens on http://localhost:8787 by default
+   ```
+3. **Return to the project root and launch the Worker dev server**
+   ```bash
+   cd ..
+   npm start
+   ```
+4. **Deploy to Cloudflare (optional)**
+   ```bash
+   npm run deploy
+   ```
 
-5. Deploy:
+## Using the Agent
 
-```bash
-npm run deploy
-```
+Try prompts like:
 
-## Project Structure
+- "Plan a week visiting Paris, Rome, and Barcelona. I’m flexible ±5 days around 1 June."
+- "What’s the weather outlook for Kyoto next Friday, and what should I do while I’m there?"
+- "Find the cheapest path from SFO → LAX → JFK with three-day stops in each city."
+- "Start a hotel search in Lisbon for 12–15 September; note that I’m still picking a booking provider."
 
-```
-├── src/
-│   ├── app.tsx        # Chat UI implementation
-│   ├── server.ts      # Chat agent logic
-│   ├── tools.ts       # Tool definitions (including flights search)
-│   ├── utils.ts       # Helper functions
-│   └── styles.css     # UI styling
-├── flights-api/       # Python API for flight searches
-│   ├── server.py      # HTTP server wrapping flights-cli
-│   ├── setup.sh       # Setup script
-│   ├── start.sh       # Start script
-│   └── README.md      # API documentation
-```
+## Roadmap
 
-## Customization Guide
+- 🔄 Finalize and integrate a reliable hotel booking API (the `bookHotel` tool currently collects intent only).
+- 📈 Add historical fare trend analysis to surface whether a price is unusually high or low.
+- 🧳 Expand packing suggestions based on weather + trip duration.
 
-### Adding New Tools
+## Acknowledgements
 
-Add new tools in `tools.ts` using the tool builder:
+- [`flights-cli`](https://github.com/AWeirdDev/flights) for the core Google Flights scraping capabilities.
+- [Firecrawl](https://www.firecrawl.dev/) for destination discovery and local experience data.
+- [OpenWeather](https://openweathermap.org/) for current conditions and forecast data.
 
-```ts
-// Example of a tool that requires confirmation
-const searchDatabase = tool({
-  description: "Search the database for user records",
-  parameters: z.object({
-    query: z.string(),
-    limit: z.number().optional()
-  })
-  // No execute function = requires confirmation
-});
-
-// Example of an auto-executing tool
-const getCurrentTime = tool({
-  description: "Get current server time",
-  parameters: z.object({}),
-  execute: async () => new Date().toISOString()
-});
-
-// Scheduling tool implementation
-const scheduleTask = tool({
-  description:
-    "schedule a task to be executed at a later time. 'when' can be a date, a delay in seconds, or a cron pattern.",
-  parameters: z.object({
-    type: z.enum(["scheduled", "delayed", "cron"]),
-    when: z.union([z.number(), z.string()]),
-    payload: z.string()
-  }),
-  execute: async ({ type, when, payload }) => {
-    // ... see the implementation in tools.ts
-  }
-});
-```
-
-To handle tool confirmations, add execution functions to the `executions` object:
-
-```typescript
-export const executions = {
-  searchDatabase: async ({
-    query,
-    limit
-  }: {
-    query: string;
-    limit?: number;
-  }) => {
-    // Implementation for when the tool is confirmed
-    const results = await db.search(query, limit);
-    return results;
-  }
-  // Add more execution handlers for other tools that require confirmation
-};
-```
-
-Tools can be configured in two ways:
-
-1. With an `execute` function for automatic execution
-2. Without an `execute` function, requiring confirmation and using the `executions` object to handle the confirmed action. NOTE: The keys in `executions` should match `toolsRequiringConfirmation` in `app.tsx`.
-
-### Use a different AI model provider
-
-The starting [`server.ts`](https://github.com/cloudflare/agents-starter/blob/main/src/server.ts) implementation uses the [`ai-sdk`](https://sdk.vercel.ai/docs/introduction) and the [OpenAI provider](https://sdk.vercel.ai/providers/ai-sdk-providers/openai), but you can use any AI model provider by:
-
-1. Installing an alternative AI provider for the `ai-sdk`, such as the [`workers-ai-provider`](https://sdk.vercel.ai/providers/community-providers/cloudflare-workers-ai) or [`anthropic`](https://sdk.vercel.ai/providers/ai-sdk-providers/anthropic) provider:
-2. Replacing the AI SDK with the [OpenAI SDK](https://github.com/openai/openai-node)
-3. Using the Cloudflare [Workers AI + AI Gateway](https://developers.cloudflare.com/ai-gateway/providers/workersai/#workers-binding) binding API directly
-
-For example, to use the [`workers-ai-provider`](https://sdk.vercel.ai/providers/community-providers/cloudflare-workers-ai), install the package:
-
-```sh
-npm install workers-ai-provider
-```
-
-Add an `ai` binding to `wrangler.jsonc`:
-
-```jsonc
-// rest of file
-  "ai": {
-    "binding": "AI"
-  }
-// rest of file
-```
-
-Replace the `@ai-sdk/openai` import and usage with the `workers-ai-provider`:
-
-```diff
-// server.ts
-// Change the imports
-- import { openai } from "@ai-sdk/openai";
-+ import { createWorkersAI } from 'workers-ai-provider';
-
-// Create a Workers AI instance
-+ const workersai = createWorkersAI({ binding: env.AI });
-
-// Use it when calling the streamText method (or other methods)
-// from the ai-sdk
-- const model = openai("gpt-4o-2024-11-20");
-+ const model = workersai("@cf/deepseek-ai/deepseek-r1-distill-qwen-32b")
-```
-
-Commit your changes and then run the `agents-starter` as per the rest of this README.
-
-### Modifying the UI
-
-The chat interface is built with React and can be customized in `app.tsx`:
-
-- Modify the theme colors in `styles.css`
-- Add new UI components in the chat container
-- Customize message rendering and tool confirmation dialogs
-- Add new controls to the header
-
-### Example Use Cases
-
-1. **Travel Assistant** ✈️ (Included in this template!)
-   - Tools provided:
-     - Flight search with Google Flights integration
-     - Weather information for destinations
-     - Task scheduling for trip planning
-     - Travel experiences discovery via Firecrawl (seasonal must-do activities)
-   - Example queries:
-     - "Find me flights from New York to London next month"
-     - "What's the weather like in Tokyo in March?"
-     - "Schedule a reminder to check my passport"
-     - "Pull must-do food experiences in Kyoto for November"
-
-2. **Customer Support Agent**
-   - Add tools for:
-     - Ticket creation/lookup
-     - Order status checking
-     - Product recommendations
-     - FAQ database search
-
-3. **Development Assistant**
-   - Integrate tools for:
-     - Code linting
-     - Git operations
-     - Documentation search
-     - Dependency checking
-
-4. **Data Analysis Assistant**
-   - Build tools for:
-     - Database querying
-     - Data visualization
-     - Statistical analysis
-     - Report generation
-
-5. **Personal Productivity Assistant**
-   - Implement tools for:
-     - Task scheduling with flexible timing options
-     - One-time, delayed, and recurring task management
-     - Task tracking with reminders
-     - Email drafting
-     - Note taking
-
-6. **Scheduling Assistant**
-   - Build tools for:
-     - One-time event scheduling using specific dates
-     - Delayed task execution (e.g., "remind me in 30 minutes")
-     - Recurring tasks using cron patterns
-     - Task payload management
-     - Flexible scheduling patterns
-
-Each use case can be implemented by:
-
-1. Adding relevant tools in `tools.ts`
-2. Customizing the UI for specific interactions
-3. Extending the agent's capabilities in `server.ts`
-4. Adding any necessary external API integrations
-
-## Learn More
-
-- [`agents`](https://github.com/cloudflare/agents/blob/main/packages/agents/README.md)
-- [Cloudflare Agents Documentation](https://developers.cloudflare.com/agents/)
-- [Cloudflare Workers Documentation](https://developers.cloudflare.com/workers/)
-
-## License
-
-MIT
