@@ -50,20 +50,25 @@ interface ForecastResponse {
 /**
  * Helper function to fetch current weather from OpenWeatherMap
  */
-async function getCurrentWeather(city: string, apiKey: string): Promise<string> {
+async function getCurrentWeather(
+  city: string,
+  apiKey: string
+): Promise<string> {
   const url = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&appid=${apiKey}&units=metric`;
-  
+
   const response = await fetch(url);
-  
+
   if (!response.ok) {
     if (response.status === 404) {
       return `City "${city}" not found. Please check the city name and try again.`;
     }
-    throw new Error(`OpenWeatherMap API error: ${response.status} ${response.statusText}`);
+    throw new Error(
+      `OpenWeatherMap API error: ${response.status} ${response.statusText}`
+    );
   }
-  
-  const data = await response.json() as CurrentWeatherResponse;
-  
+
+  const data = (await response.json()) as CurrentWeatherResponse;
+
   return `Current weather in ${data.name}, ${data.sys.country}:
 - Temperature: ${data.main.temp}°C (feels like ${data.main.feels_like}°C)
 - Conditions: ${data.weather[0].main} - ${data.weather[0].description}
@@ -76,54 +81,62 @@ async function getCurrentWeather(city: string, apiKey: string): Promise<string> 
 /**
  * Helper function to fetch forecast weather from OpenWeatherMap
  */
-async function getForecastWeather(city: string, targetDate: string, apiKey: string): Promise<string> {
+async function getForecastWeather(
+  city: string,
+  targetDate: string,
+  apiKey: string
+): Promise<string> {
   const url = `https://api.openweathermap.org/data/2.5/forecast?q=${encodeURIComponent(city)}&appid=${apiKey}&units=metric`;
-  
+
   const response = await fetch(url);
-  
+
   if (!response.ok) {
     if (response.status === 404) {
       return `City "${city}" not found. Please check the city name and try again.`;
     }
-    throw new Error(`OpenWeatherMap API error: ${response.status} ${response.statusText}`);
+    throw new Error(
+      `OpenWeatherMap API error: ${response.status} ${response.statusText}`
+    );
   }
-  
-  const data = await response.json() as ForecastResponse;
+
+  const data = (await response.json()) as ForecastResponse;
   const targetDateTime = new Date(targetDate);
-  
+
   // Validate that the target date is within 5 days
   const now = new Date();
   const maxDate = new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000);
-  
+
   if (targetDateTime < now) {
     return `Cannot get forecast for past dates. The date ${targetDate} is in the past. Use the tool without a date to get current weather.`;
   }
-  
+
   if (targetDateTime > maxDate) {
-    return `Cannot get forecast beyond 5 days. The date ${targetDate} is too far in the future. Maximum forecast date is ${maxDate.toISOString().split('T')[0]}.`;
+    return `Cannot get forecast beyond 5 days. The date ${targetDate} is too far in the future. Maximum forecast date is ${maxDate.toISOString().split("T")[0]}.`;
   }
-  
+
   // Find forecasts for the target date
-  const targetDateStr = targetDateTime.toISOString().split('T')[0];
+  const targetDateStr = targetDateTime.toISOString().split("T")[0];
   const matchingForecasts = data.list.filter((item) => {
-    const forecastDate = new Date(item.dt * 1000).toISOString().split('T')[0];
+    const forecastDate = new Date(item.dt * 1000).toISOString().split("T")[0];
     return forecastDate === targetDateStr;
   });
-  
+
   if (matchingForecasts.length === 0) {
     return `No forecast data available for ${targetDate} in ${city}. Try a date within the next 5 days.`;
   }
-  
+
   // Format all forecasts for that day
-  const forecastsText = matchingForecasts.map((item) => {
-    const time = new Date(item.dt * 1000).toLocaleTimeString('en-US', { 
-      hour: '2-digit', 
-      minute: '2-digit',
-      hour12: false 
-    });
-    return `  ${time}: ${item.main.temp}°C, ${item.weather[0].description}, Humidity: ${item.main.humidity}%, Wind: ${item.wind.speed} m/s`;
-  }).join('\n');
-  
+  const forecastsText = matchingForecasts
+    .map((item) => {
+      const time = new Date(item.dt * 1000).toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false
+      });
+      return `  ${time}: ${item.main.temp}°C, ${item.weather[0].description}, Humidity: ${item.main.humidity}%, Wind: ${item.wind.speed} m/s`;
+    })
+    .join("\n");
+
   return `Weather forecast for ${data.city.name}, ${data.city.country} on ${targetDate}:
 ${forecastsText}`;
 }
@@ -147,7 +160,10 @@ interface FirecrawlSearchResponse {
   warning?: string;
 }
 
-async function fetchFirecrawlExperiences(query: string, limit = 8): Promise<FirecrawlWebResult[]> {
+async function fetchFirecrawlExperiences(
+  query: string,
+  limit = 8
+): Promise<FirecrawlWebResult[]> {
   const apiKey = process.env.FIRECRAWL_API_KEY;
 
   if (!apiKey) {
@@ -195,7 +211,11 @@ async function fetchFirecrawlExperiences(query: string, limit = 8): Promise<Fire
     let errorDetail = `${response.status} ${response.statusText}`;
     try {
       const errorBody = await response.json();
-      if (errorBody && typeof errorBody === "object" && "message" in errorBody) {
+      if (
+        errorBody &&
+        typeof errorBody === "object" &&
+        "message" in errorBody
+      ) {
         errorDetail = `${errorDetail} - ${(errorBody as { message?: string }).message}`;
       }
     } catch {
@@ -207,7 +227,9 @@ async function fetchFirecrawlExperiences(query: string, limit = 8): Promise<Fire
   const data = (await response.json()) as FirecrawlSearchResponse;
 
   if (!data.success) {
-    throw new Error("Firecrawl search was unsuccessful. Check query parameters.");
+    throw new Error(
+      "Firecrawl search was unsuccessful. Check query parameters."
+    );
   }
 
   const results = data.data?.web ?? [];
@@ -216,7 +238,9 @@ async function fetchFirecrawlExperiences(query: string, limit = 8): Promise<Fire
     return [];
   }
 
-  return results.filter((item) => item.title || item.summary || item.description);
+  return results.filter(
+    (item) => item.title || item.summary || item.description
+  );
 }
 
 /**
@@ -224,14 +248,20 @@ async function fetchFirecrawlExperiences(query: string, limit = 8): Promise<Fire
  * Uses OpenWeatherMap API to get real weather data
  */
 const getWeatherInformation = tool({
-  description: "Get weather information for a city. Can fetch current weather or forecast for future dates (up to 5 days ahead).",
-  inputSchema: z.object({ 
+  description:
+    "Get weather information for a city. Can fetch current weather or forecast for future dates (up to 5 days ahead).",
+  inputSchema: z.object({
     city: z.string().describe("The city name to get weather for"),
-    date: z.string().optional().describe("Optional: Future date in YYYY-MM-DD format for forecast (max 5 days ahead). If not provided, returns current weather.")
+    date: z
+      .string()
+      .optional()
+      .describe(
+        "Optional: Future date in YYYY-MM-DD format for forecast (max 5 days ahead). If not provided, returns current weather."
+      )
   }),
   execute: async ({ city, date }) => {
     const apiKey = process.env.OPENWEATHER_API_KEY;
-    
+
     if (!apiKey) {
       return "Error: OpenWeatherMap API key not configured. Please set OPENWEATHER_API_KEY in .dev.vars";
     }
@@ -350,7 +380,9 @@ const getTravelExperiences = tool({
     month: z
       .string()
       .optional()
-      .describe("Target travel month (e.g., 'November'). Used to seasonally scope results."),
+      .describe(
+        "Target travel month (e.g., 'November'). Used to seasonally scope results."
+      ),
     context: z
       .string()
       .optional()
@@ -367,7 +399,8 @@ const getTravelExperiences = tool({
 
     const baseQuery = `absolute must activities to do in ${trimmedDestination}`;
     const scopedQuery = month ? `${baseQuery} in ${month}` : baseQuery;
-    const searchQuery = context && context.trim().length > 0 ? context.trim() : scopedQuery;
+    const searchQuery =
+      context && context.trim().length > 0 ? context.trim() : scopedQuery;
 
     try {
       const results = await fetchFirecrawlExperiences(searchQuery);
@@ -378,11 +411,17 @@ const getTravelExperiences = tool({
 
       const formatted = results.slice(0, 6).map((item, index) => {
         const title = item.title?.trim() || `Experience ${index + 1}`;
-        const summary = (item.summary ?? item.description ?? "No description provided.")
+        const summary = (
+          item.summary ??
+          item.description ??
+          "No description provided."
+        )
           .replace(/\s+/g, " ")
           .trim();
-        const snippet = summary.length > 280 ? `${summary.slice(0, 277)}...` : summary;
-        const sourceUrl = item.url ?? item.metadata?.sourceURL ?? "Source unavailable";
+        const snippet =
+          summary.length > 280 ? `${summary.slice(0, 277)}...` : summary;
+        const sourceUrl =
+          item.url ?? item.metadata?.sourceURL ?? "Source unavailable";
 
         return `${index + 1}. ${title}\n   • ${snippet}\n   • Source: ${sourceUrl}`;
       });
@@ -410,7 +449,12 @@ async function searchFlights(params: {
   }>;
   maxStops?: number;
   cabinClass?: "economy" | "premium-economy" | "business" | "first";
-  fetchMode?: "common" | "fallback" | "force-fallback" | "local" | "bright-data";
+  fetchMode?:
+    | "common"
+    | "fallback"
+    | "force-fallback"
+    | "local"
+    | "bright-data";
   dataSource?: "html" | "js";
   adults?: number;
   children?: number;
@@ -421,15 +465,16 @@ async function searchFlights(params: {
   prettyPrint?: boolean;
 }): Promise<string> {
   // Get the Python API endpoint from environment variable
-  const pythonApiUrl = process.env.FLIGHTS_API_URL || "http://localhost:8787/api/flights";
-  
+  const pythonApiUrl =
+    process.env.FLIGHTS_API_URL || "http://localhost:8787/api/flights";
+
   try {
     const response = await fetch(pythonApiUrl, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
+        "Content-Type": "application/json"
       },
-      body: JSON.stringify(params),
+      body: JSON.stringify(params)
     });
 
     if (!response.ok) {
@@ -438,27 +483,29 @@ async function searchFlights(params: {
     }
 
     const result = await response.json();
-    
+
     // If the API returns structured data, format it nicely
     if (typeof result === "object") {
       return JSON.stringify(result, null, 2);
     }
-    
+
     return String(result);
   } catch (error) {
     console.error("Error calling flights API:", error);
-    
+
     // Provide helpful error message
     if (error instanceof Error && error.message.includes("fetch failed")) {
       throw new Error(
         `Unable to connect to the flights API service at ${pythonApiUrl}. ` +
-        `Please ensure the Python API service is running. ` +
-        `You can start it by running the flights-api-server.py script. ` +
-        `Set FLIGHTS_API_URL environment variable to configure the endpoint.`
+          `Please ensure the Python API service is running. ` +
+          `You can start it by running the flights-api-server.py script. ` +
+          `Set FLIGHTS_API_URL environment variable to configure the endpoint.`
       );
     }
-    
-    throw new Error(`Failed to search flights: ${error instanceof Error ? error.message : String(error)}`);
+
+    throw new Error(
+      `Failed to search flights: ${error instanceof Error ? error.message : String(error)}`
+    );
   }
 }
 
@@ -472,20 +519,43 @@ const searchFlightsTool = tool({
     tripType: z
       .enum(["one-way", "round-trip", "multi-city"])
       .optional()
-      .describe("Type of trip. If not specified, will be inferred from segments (2 segments = round-trip, otherwise one-way)"),
+      .describe(
+        "Type of trip. If not specified, will be inferred from segments (2 segments = round-trip, otherwise one-way)"
+      ),
     segments: z
       .array(
         z.object({
           date: z.string().describe("Departure date in YYYY-MM-DD format"),
-          from: z.string().describe("Origin airport IATA code (e.g., 'JFK', 'LAX')"),
-          to: z.string().describe("Destination airport IATA code (e.g., 'LHR', 'SFO')"),
-          maxStops: z.number().optional().describe("Maximum stops for this specific segment (overrides global maxStops)"),
-          airlines: z.string().optional().describe("Comma-separated airline codes (e.g., 'AA,DL') or alliances (e.g., 'SKYTEAM')")
+          from: z
+            .string()
+            .describe("Origin airport IATA code (e.g., 'JFK', 'LAX')"),
+          to: z
+            .string()
+            .describe("Destination airport IATA code (e.g., 'LHR', 'SFO')"),
+          maxStops: z
+            .number()
+            .optional()
+            .describe(
+              "Maximum stops for this specific segment (overrides global maxStops)"
+            ),
+          airlines: z
+            .string()
+            .optional()
+            .describe(
+              "Comma-separated airline codes (e.g., 'AA,DL') or alliances (e.g., 'SKYTEAM')"
+            )
         })
       )
       .min(1)
-      .describe("Flight segments. For round-trip, provide 2 segments. For multi-city, provide 3 or more."),
-    maxStops: z.number().optional().describe("Maximum number of stops globally (can be overridden per segment)"),
+      .describe(
+        "Flight segments. For round-trip, provide 2 segments. For multi-city, provide 3 or more."
+      ),
+    maxStops: z
+      .number()
+      .optional()
+      .describe(
+        "Maximum number of stops globally (can be overridden per segment)"
+      ),
     cabinClass: z
       .enum(["economy", "premium-economy", "business", "first"])
       .default("economy")
@@ -493,27 +563,59 @@ const searchFlightsTool = tool({
     fetchMode: z
       .enum(["common", "fallback", "force-fallback", "local", "bright-data"])
       .default("common")
-      .describe("Backend fetch strategy: 'common' for direct HTTP, 'fallback' for fallback to Playwright, etc."),
+      .describe(
+        "Backend fetch strategy: 'common' for direct HTTP, 'fallback' for fallback to Playwright, etc."
+      ),
     dataSource: z
       .enum(["html", "js"])
       .default("html")
-      .describe("Data source: 'html' for summaries, 'js' for detailed itinerary data"),
-    adults: z.number().min(1).max(9).default(1).describe("Number of adult passengers"),
-    children: z.number().min(0).max(8).default(0).describe("Number of child passengers"),
-    infantsInSeat: z.number().min(0).default(0).describe("Number of infants in seats"),
-    infantsOnLap: z.number().min(0).default(0).describe("Number of infants on lap (must not exceed adults)"),
-    bestOnly: z.boolean().default(false).describe("Return only the best flight(s)"),
+      .describe(
+        "Data source: 'html' for summaries, 'js' for detailed itinerary data"
+      ),
+    adults: z
+      .number()
+      .min(1)
+      .max(9)
+      .default(1)
+      .describe("Number of adult passengers"),
+    children: z
+      .number()
+      .min(0)
+      .max(8)
+      .default(0)
+      .describe("Number of child passengers"),
+    infantsInSeat: z
+      .number()
+      .min(0)
+      .default(0)
+      .describe("Number of infants in seats"),
+    infantsOnLap: z
+      .number()
+      .min(0)
+      .default(0)
+      .describe("Number of infants on lap (must not exceed adults)"),
+    bestOnly: z
+      .boolean()
+      .default(false)
+      .describe("Return only the best flight(s)"),
     jsonOutput: z.boolean().default(true).describe("Output structured JSON"),
-    prettyPrint: z.boolean().default(true).describe("Format JSON with indentation (requires jsonOutput to be true)")
+    prettyPrint: z
+      .boolean()
+      .default(true)
+      .describe("Format JSON with indentation (requires jsonOutput to be true)")
   }),
   execute: async (params) => {
     try {
       // Validate total passengers
-      const totalPassengers = params.adults + params.children + params.infantsInSeat + params.infantsOnLap;
+      const totalPassengers =
+        params.adults +
+        params.children +
+        params.infantsInSeat +
+        params.infantsOnLap;
       if (totalPassengers > 9) {
         return "Error: Total number of passengers cannot exceed 9.";
       }
-      
+
       // Validate infants on lap
       if (params.infantsOnLap > params.adults) {
         return "Error: Number of infants on lap cannot exceed number of adults.";

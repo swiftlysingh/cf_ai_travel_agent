@@ -24,6 +24,7 @@ A starter template for building AI-powered chat agents using Cloudflare's Agent 
 This project includes a flight search tool that integrates with Google Flights via the `flights-cli` Python package. The API runs separately from the Cloudflare Workers agent.
 
 **Setup:**
+
 ```bash
 cd flights-api
 ./setup.sh
@@ -31,11 +32,13 @@ cd ..
 ```
 
 **Start the API server:**
+
 ```bash
 ./flights-api/start.sh
 ```
 
 **Usage:** Ask the agent to search for flights:
+
 - "Find me flights from SFO to LAX on March 1, 2026"
 - "Search for round-trip business class flights from JFK to London"
 
