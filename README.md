@@ -2,8 +2,6 @@
 
 A Cloudflare Workers AI agent that builds smarter, cheaper multi-city travel plans.
 
-<a href="https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/agents-starter"><img src="https://deploy.workers.cloudflare.com/button" alt="Deploy to Cloudflare"/></a>
-
 ## Why This Exists
 
 Long, multi-stop trips are notoriously hard to price. Flying A → B → C might be dramatically cheaper than the more obvious B → A → C, and the best route often changes if you shift the dates by a couple of days. This agent runs the permutations for you, checks real flight prices, and layers on weather and activity research so you can plan with confidence.
