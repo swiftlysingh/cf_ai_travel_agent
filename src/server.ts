@@ -18,7 +18,7 @@ import { processToolCalls, cleanupMessages } from "./utils";
 import { tools, executions } from "./tools";
 // import { env } from "cloudflare:workers";
 
-const model = openai("gpt-5-mini");
+const model = openai("gpt-5-nano-2025-08-07");
 // Cloudflare AI Gateway
 // const openai = createOpenAI({
 //   apiKey: env.OPENAI_API_KEY,
@@ -157,11 +157,11 @@ export class Chat extends AIChatAgent<Env> {
           Example Summary Format:
             I've analyzed 12 different route combinations and 36 date variations. 
             Here are the top 3 options:
-          ────────────────────────────────────────────────────────────────────────────
+
             OPTION A: Tokyo → Kyoto → Osaka (Nov 10-25) - ₹1,45,930 [RECOMMENDED - Best value]
             OPTION B: Osaka → Kyoto → Tokyo (Nov 12-27) - ₹1,38,500 [CHEAPEST - Longer layovers]
             OPTION C: Tokyo → Osaka → Kyoto (Nov 10-25) - ₹1,52,400 [Most convenient - Direct flights]
-          ────────────────────────────────────────────────────────────────────────────
+
           FLIGHT & ACCOMMODATION SEARCH:
 
 
@@ -172,90 +172,36 @@ export class Chat extends AIChatAgent<Env> {
           - Always prioritize best value for money
 
           ITINERARY PRESENTATION:
-          - MUST use ASCII tables for all itineraries (see example below)
+          - MUST use MARKDOWN tables for all itineraries (see example below)
           - Include itemized pricing for flights, accommodation, and estimated activities
           - Always show the total trip cost prominently at the bottom
           - Include weather forecasts for travel dates
           - List visa/vaccine requirements clearly
 
-          ASCII TABLE FORMAT EXAMPLE:
+          MARKDOWN TABLE FORMAT EXAMPLE:
           When presenting itineraries, format them exactly like this:
-            ╔════════════════════════════════════════════════════════════════════════════╗
-            ║                     JAPAN TRIP ITINERARY - OPTION B                        ║
-            ║                    10 Nov 2025 - 25 Nov 2025 (16 Days)                    ║
-            ╚════════════════════════════════════════════════════════════════════════════╝
-            
-            ┌────────────────────────────────────────────────────────────────────────────┐
-            │ ROUTING & DATES                                                            │
-            ├──────────────┬─────────────────────────────────────────────┬───────────────┤
-            │ Date         │ Route / Activity                            │ Nights        │
-            ├──────────────┼─────────────────────────────────────────────┼───────────────┤
-            │ 10 Nov 2025  │ Depart DEL → Tokyo (arrive 11 Nov local)    │ In-flight     │
-            │ 11-14 Nov    │ Tokyo                                       │ 3 nights      │
-            │ 14 Nov       │ Tokyo → Osaka (KIX) via Jetstar            │ Travel day    │
-            │ 14-18 Nov    │ Kyoto (3 nights) + Osaka (1 night)         │ 4 nights      │
-            │ 18 Nov       │ Osaka (KIX) → Nagasaki (NGS) via Peach     │ Travel day    │
-            │ 18-22 Nov    │ Nagasaki                                    │ 4 nights      │
-            │ 22 Nov       │ Nagasaki → Tokyo via Jetstar               │ Travel day    │
-            │ 22-25 Nov    │ Tokyo                                       │ 3 nights      │
-            │ 25 Nov       │ Tokyo → DEL (return)                        │ In-flight     │
-            └──────────────┴─────────────────────────────────────────────┴───────────────┘
-            
-            ┌────────────────────────────────────────────────────────────────────────────┐
-            │ FLIGHT BREAKDOWN                                                           │
-            ├────────────────────────────────────────────────────────────┬──────────┬────────┤
-            │ Route                                                  │ Carrier  │ Price  │
-            ├────────────────────────────────────────────────────────────┼──────────┼────────┤
-            │ International: DEL ↔ Tokyo (Round-trip)               │          │        │
-            │ • 10 Nov: DEL → Tokyo (1 stop)                        │ Cathay   │        │
-            │ • 25 Nov: Tokyo → DEL                                 │ Pacific  │ ₹45,900│
-            ├────────────────────────────────────────────────────────────┼──────────┼────────┤
-            │ Domestic: Tokyo → Osaka (KIX) - 14 Nov                │ Jetstar  │ ₹3,071 │
-            │ Domestic: Osaka (KIX) → Nagasaki - 18 Nov            │ Peach    │ ₹3,486 │
-            │ Domestic: Nagasaki → Tokyo - 22 Nov                  │ Jetstar  │ ₹5,893 │
-            ├────────────────────────────────────────────────────────────┼──────────┼────────┤
-            │ Checked baggage fees (domestic flights, estimated)    │ Various  │ ₹4,980 │
-            ├────────────────────────────────────────────────────────────┴──────────┼────────┤
-            │                                        FLIGHTS SUBTOTAL │        ₹63,330 │
-            └─────────────────────────────────────────────────────────┴────────────────┘
-            
-            ┌────────────────────────────────────────────────────────────────────────────┐
-            │ ACCOMMODATION (Budget Private Rooms / Business Hotels)                     │
-            ├──────────────────────────────────┬────────┬────────────┬───────────────────┤
-            │ Location                         │ Nights │ Per Night  │ Total             │
-            ├──────────────────────────────────┼────────┼────────────┼───────────────────┤
-            │ Tokyo                            │ 6      │ ₹4,500     │ ₹27,000           │
-            │ Kyoto                            │ 3      │ ₹4,000     │ ₹12,000           │
-            │ Osaka                            │ 1      │ ₹3,800     │ ₹3,800            │
-            │ Nagasaki                         │ 4      │ ₹3,200     │ ₹12,800           │
-            ├──────────────────────────────────┴────────┴────────────┼───────────────────┤
-            │                                 ACCOMMODATION SUBTOTAL │ ₹55,600           │
-            └────────────────────────────────────────────────────────┴───────────────────┘
-            
-            ┌────────────────────────────────────────────────────────────────────────────┐
-            │ ADDITIONAL EXPENSES                                                        │
-            ├────────────────────────────────────────────────────────┬───────────────────┤
-            │ Category                                               │ Estimated Cost    │
-            ├────────────────────────────────────────────────────────┼───────────────────┤
-            │ Local transport (metro, buses, taxis)                 │ ₹6,000            │
-            │ Food & activities (₹1,500/day × 14 days)             │ ₹21,000           │
-            ├────────────────────────────────────────────────────────┼───────────────────┤
-            │                                      ADDITIONAL TOTAL  │ ₹27,000           │
-            └────────────────────────────────────────────────────────┴───────────────────┘
-            
-            ╔════════════════════════════════════════════════════════════════════════════╗
-            ║                              TRIP COST SUMMARY                             ║
-            ╠────────────────────────────────────────────────────────┬───────────────────╣
-            ║ Flights (international + domestic + baggage)          │ ₹63,330           ║
-            ║ Accommodation (14 nights)                             │ ₹55,600           ║
-            ║ Local transport                                       │ ₹6,000            ║
-            ║ Food & activities                                     │ ₹21,000           ║
-            ╠════════════════════════════════════════════════════════╪═══════════════════╣
-            ║                                         TOTAL ESTIMATE │ ₹1,45,930         ║
-            ╠════════════════════════════════════════════════════════╧═══════════════════╣
-            ║ Note: Travel insurance (₹1,500-2,500) recommended but not included above  ║
-            ╚════════════════════════════════════════════════════════════════════════════╝
+          '''
+          ## JAPAN TRIP ITINERARY
+          ### OPTION B
+          ### 10 Nov 2025 - 25 Nov 2025 (16 Days)
 
+          ### ROUTING & DATES
+
+          | Date | Route / Activity | Nights |
+          |------|------------------|--------|
+          | 10 Nov 2025 | Depart DEL → Tokyo (arrive 11 Nov local) | In-flight |
+          | 11-14 Nov | Tokyo | 3 nights |
+          | 14 Nov | Tokyo → Osaka (KIX) via Jetstar | Travel day |
+
+          ### FLIGHT BREAKDOWN
+
+          | Route | Carrier | Price |
+          |-------|---------|-------|
+          | DEL → Tokyo (Round-trip) | Cathay Pacific | ₹45,900 |
+          | Tokyo → Osaka (KIX) - 14 Nov | Jetstar | ₹3,071 |
+
+          ### TOTAL ESTIMATE: ₹1,45,930
+        '''
           Use this exact formatting style for all itineraries. Key elements:
 
 
